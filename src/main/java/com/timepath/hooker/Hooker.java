@@ -8,44 +8,15 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * @author TimePath
+ */
 public class Hooker {
 
     private static final Logger LOG = Logger.getLogger(MethodHandles.lookup().lookupClass().getName());
-
-    public static void main(String[] args) throws Throwable {
-        args = new String[]{"com.timepath.hooker.Test", "com.timepath.hooker.Test"};
-        if (args.length < 2) {
-            System.err.println("Usage: <prefix> <Main>, [args]");
-            System.exit(1);
-        }
-        final String prefix = args[0];
-        final String main = args[1];
-        String[] sub = new String[args.length - 2];
-        System.arraycopy(args, 2, sub, 0, sub.length);
-        hook(new HookFilter() {
-            @Override
-            public boolean accept(String classname) {
-                return classname.startsWith(prefix);
-            }
-        }, new Hook() {
-            @Override
-            public void before(Object inst, String owner, String method, Object[] args) {
-                LOG.info("{ " + inst + " " + owner + " " + method + "\t" + Arrays.deepToString(args));
-            }
-
-            @Override
-            public void after(Object inst, String owner, String method, Object[] args) {
-                LOG.info("} " + inst + " " + owner + " " + method + "\t" + Arrays.deepToString(args));
-            }
-        }, main);
-    }
 
     private static Method findMethod(Class c, String name) {
         for (Method m : c.getDeclaredMethods()) {
@@ -54,6 +25,15 @@ public class Hooker {
         return null;
     }
 
+    /**
+     * Run an entry point with targeted hooks.
+     *
+     * @param filter a filter targeting specific classes
+     * @param hook   the hook to attach to every method in every class matching the filter
+     * @param main   the entry point to start
+     * @param args   the command line arguments
+     * @throws Throwable
+     */
     public static void hook(final HookFilter filter, final Hook hook, String main, String... args) throws Throwable {
         final String hooks = Hooks.class.getName();
         ClassPool cp = ClassPool.getDefault();
@@ -98,34 +78,4 @@ public class Hooker {
         cl.run(main, args);
     }
 
-    public static interface Hook {
-
-        void before(Object inst, String owner, String method, Object[] args);
-
-        void after(Object inst, String owner, String method, Object[] args);
-    }
-
-    public static interface HookFilter {
-
-        boolean accept(String classname);
-
-    }
-
-    @SuppressWarnings("UnusedDeclaration")
-    public static class Hooks {
-
-        private static final Map<String, Hook> hooks = Collections.synchronizedMap(new HashMap<String, Hook>());
-
-        public static void put(String classname, Hook hook) {
-            hooks.put(classname, hook);
-        }
-
-        public static void before(String classname, Object inst, String owner, String method, Object[] args) {
-            hooks.get(classname).before(inst, owner, method, args);
-        }
-
-        public static void after(String classname, Object inst, String owner, String method, Object[] args) {
-            hooks.get(classname).after(inst, owner, method, args);
-        }
-    }
 }
