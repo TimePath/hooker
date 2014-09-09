@@ -11,7 +11,6 @@ import java.util.logging.Logger;
 public class Hooker {
 
     private static final Logger LOG = Logger.getLogger(MethodHandles.lookup().lookupClass().getName());
-    private static final Object EMPTY = new Object[0];
 
     public static void main(String[] args) throws Throwable {
         args = new String[]{"com.timepath.hooker.Test", "com.timepath.hooker.Test"};
@@ -44,7 +43,7 @@ public class Hooker {
             public void onLoad(ClassPool pool, String classname) throws NotFoundException, CannotCompileException {
                 if (!filter.accept(classname)) return;
                 // https://rawgit.com/jboss-javassist/javassist/master/tutorial/tutorial2.html#before
-                String format = "{ %s.%s((Object)%s, \"%s\", \"%s\", $$); }";
+                String format = "{ %s.%s((Object)%s, \"%s\", \"%s\", $args); }";
                 CtClass cc = pool.get(classname);
                 for (CtMethod m : cc.getDeclaredMethods()) {
                     boolean isInstance = (m.getModifiers() & AccessFlag.STATIC) == 0;
@@ -62,31 +61,14 @@ public class Hooker {
         cl.run(main, args);
     }
 
-    private static String pprint(Object... arr) {
-        String join = ", ";
-        StringBuilder sb = new StringBuilder();
-        for (Object a : arr) {
-            sb.append(join).append(a.getClass().isArray() ? Arrays.toString((Object[]) a) : String.valueOf(a));
-        }
-        return sb.substring(Math.min(join.length(), sb.length()));
+    @SuppressWarnings("UnusedDeclaration")
+    public static void before(Object inst, String owner, String method, Object[] args) {
+        LOG.info("{ " + inst + " " + owner + " " + method + "\t" + Arrays.deepToString(args));
     }
 
     @SuppressWarnings("UnusedDeclaration")
-    public static void before(Object inst, String owner, String method) {
-        before(inst, owner, method, EMPTY);
-    }
-
-    public static void before(Object inst, String owner, String method, Object args) {
-        LOG.info("{ " + inst + " " + owner + " " + method + "\t" + pprint(args));
-    }
-
-    @SuppressWarnings("UnusedDeclaration")
-    public static void after(Object inst, String owner, String method) {
-        after(inst, owner, method, EMPTY);
-    }
-
-    public static void after(Object inst, String owner, String method, Object args) {
-        LOG.info("} " + inst + " " + owner + " " + method + "\t" + pprint(args));
+    public static void after(Object inst, String owner, String method, Object[] args) {
+        LOG.info("} " + inst + " " + owner + " " + method + "\t" + Arrays.deepToString(args));
     }
 
     public static interface HookFilter {
