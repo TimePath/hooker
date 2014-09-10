@@ -5,8 +5,24 @@ package com.timepath.hooker;
  */
 public interface Hook {
 
-    void before(Object inst, String owner, String method, Object[] args);
+    /**
+     * Called once per class
+     *
+     * @param owner
+     * @param method
+     * @return true if the method body should be discarded
+     */
+    boolean override(String owner, String method);
 
-    void after(Object inst, String owner, String method, Object[] args);
+    /**
+     * @param inst
+     * @param owner
+     * @param method
+     * @param args   the method arguments, can be modified
+     * @param out    Object[1] if overridden, else null
+     */
+    void before(Object inst, String owner, String method, Object[] args, Object[] out);
+
+    void after(Object inst, String owner, String method, Object[] out);
 
 }

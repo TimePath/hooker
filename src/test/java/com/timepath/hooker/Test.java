@@ -1,9 +1,5 @@
 package com.timepath.hooker;
 
-import javassist.CtMethod;
-import javassist.CtNewMethod;
-import javassist.bytecode.MethodInfo;
-
 import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
 import java.util.logging.Logger;
@@ -38,13 +34,22 @@ public class Test {
             }
 
             @Override
-            public void before(Object inst, String owner, String method, Object[] args) {
-                LOG.info(pad(depth++) + ">>> " + inst + " " + owner + " " + method + "\t" + Arrays.deepToString(args));
+            public boolean override(String owner, String method) {
+                return method.startsWith("hello");
             }
 
             @Override
-            public void after(Object inst, String owner, String method, Object[] args) {
-                LOG.info(pad(--depth) + "<<< " + inst + " " + owner + " " + method + "\t" + Arrays.deepToString(args));
+            public void before(Object inst, String owner, String method, Object[] args, Object[] out) {
+                LOG.info(pad(depth++) + ">>> " + inst + " " + owner + " " + method + "\t" + Arrays.deepToString(args));
+                if(method.startsWith("hello")) {
+                    System.out.println("Override!");
+                    out[0] = "override";
+                }
+            }
+
+            @Override
+            public void after(Object inst, String owner, String method, Object[] out) {
+                LOG.info(pad(--depth) + "<<< " + inst + " " + owner + " " + method + "\t" + Arrays.deepToString(out));
             }
         }, main);
     }
@@ -52,6 +57,7 @@ public class Test {
     public static class Demo {
 
         public static void main(String[] args) {
+            System.out.println("result = " + hello("world"));
             test(args);
             test(null);
             test(new Object[]{null});
@@ -62,6 +68,11 @@ public class Test {
             new StaticInner().test();
             StaticInner.test(7, 8);
             new Demo().test();
+        }
+
+        private static String hello(String world) {
+            System.out.println("This method is overridden");
+            return world;
         }
 
         static void test(Object... a) {

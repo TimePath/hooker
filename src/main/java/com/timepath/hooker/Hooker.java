@@ -44,7 +44,9 @@ public class Hooker {
                 return findMethod(Hook.class, method.getName()).invoke(hook, args);
             }
         });
-        final Method put = findMethod(cl.loadClass(hooks), "put");
+        Class<?> clazz = cl.loadClass(hooks);
+        final Method put = findMethod(clazz, "put");
+        final Method override = findMethod(clazz, "override");
         cl.addTranslator(cp, new Translator() {
 
             @Override
@@ -53,29 +55,55 @@ public class Hooker {
 
             @Override
             public void onLoad(ClassPool pool, String classname) throws NotFoundException, CannotCompileException {
-                if (!filter.accept(classname)) return;
+                if (!filter.accept(classname))
+                    return;
                 try {
                     put.invoke(null, classname, proxy);
                 } catch (IllegalAccessException | InvocationTargetException e) {
-                    e.printStackTrace();
+                    LOG.log(Level.SEVERE, classname, e);
                 }
-                // https://rawgit.com/jboss-javassist/javassist/master/tutorial/tutorial2.html#before
-                String format = hooks + ".%s(\"" + classname + "\", (Object) %s, \"%s\", \"%s\", %s);";
+                // http://www.csg.ci.i.u-tokyo.ac.jp/~chiba/javassist/tutorial/tutorial2.html#before
                 CtClass cc = pool.get(classname);
                 for (CtMethod m : cc.getDeclaredMethods()) {
+                    String owner = m.getDeclaringClass().getName();
+                    String method = m.getMethodInfo2().toString();
+                    boolean replace = false;
+                    try {
+                        replace = (boolean) override.invoke(null, classname, owner, method);
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+                        LOG.log(Level.SEVERE, m.getLongName(), e);
+                    }
                     boolean isInstance = (m.getModifiers() & AccessFlag.STATIC) == 0;
                     String instance = isInstance ? "this" : "null";
+                    String format = hooks + ".%s(\"" + classname + "\"," +
+                            "(Object) " + instance + "," +
+                            "\"" + owner + "\"," +
+                            "\"" + method + "\"," +
+                            "%s);";
                     try {
-                        m.insertBefore("{"
-                                + "Object[] args = $args;"
-                                + String.format(format, "before", instance, m.getDeclaringClass().getName(), m.getMethodInfo2(), "args")
-                                + "$args = args;"
-                                + "}");
-                        m.insertAfter("{"
-                                + "Object[] ret = new Object[] {($w) $_};"
-                                + String.format(format, "after", instance, m.getDeclaringClass().getName(), m.getMethodInfo2(), "ret")
-                                + "$_ = ($r) ret[0];"
-                                + "}", true);
+                        if (replace) {
+                            CtClass returnType = m.getReturnType();
+                            String r = returnType.getSimpleName();
+                            m.setBody("{"
+                                    + "Object[] args = $args;"
+                                    + "Object[] out = {" + (returnType.isPrimitive() ? 0 : null) + "};"
+                                    + String.format(format, "before", "args, out")
+                                    + "$args = args;"
+                                    + String.format(format, "after", "out")
+                                    + "return (" + r + ") out[0];"
+                                    + "}");
+                        } else {
+                            m.insertBefore("{"
+                                    + "Object[] args = $args;"
+                                    + String.format(format, "before", "args, null")
+                                    + "$args = args;"
+                                    + "}");
+                            m.insertAfter("{"
+                                    + "Object[] out = {($w) $_};"
+                                    + String.format(format, "after", "out")
+                                    + "$_ = ($r) out[0];"
+                                    + "}", true);
+                        }
                     } catch (CannotCompileException e) {
                         LOG.log(Level.SEVERE, m.getLongName(), e);
                         throw e;

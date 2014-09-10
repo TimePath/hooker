@@ -17,8 +17,12 @@ public class Hooks {
         hooks.put(classname, hook);
     }
 
-    public static void before(String classname, Object inst, String owner, String method, Object[] args) {
-        hooks.get(classname).before(inst, owner, method, args);
+    public static boolean override(String classname, String owner, String method) {
+        return hooks.get(classname).override(owner, method);
+    }
+
+    public static void before(String classname, Object inst, String owner, String method, Object[] args, Object[] out) {
+        hooks.get(classname).before(inst, owner, method, args, out);
     }
 
     public static void after(String classname, Object inst, String owner, String method, Object[] args) {
