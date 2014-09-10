@@ -42,7 +42,7 @@ public class Test {
             public void before(Object inst, String owner, String method, Object[] args, Object[] out) {
                 LOG.info(pad(depth++) + ">>> " + inst + " " + owner + " " + method + "\t" + Arrays.deepToString(args));
                 if(method.startsWith("hello")) {
-                    System.out.println("Override!");
+                    LOG.info("Override!");
                     out[0] = "override";
                 }
             }
@@ -57,7 +57,7 @@ public class Test {
     public static class Demo {
 
         public static void main(String[] args) {
-            System.out.println("result = " + hello("world"));
+            LOG.info("result = " + hello("world"));
             test(args);
             test(null);
             test(new Object[]{null});
@@ -71,7 +71,7 @@ public class Test {
         }
 
         private static String hello(String world) {
-            System.out.println("This method is overridden");
+            LOG.info("This method is overridden");
             return world;
         }
 
