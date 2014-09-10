@@ -72,7 +72,9 @@ public class Hooker {
                                 + "$args = args;"
                                 + "}");
                         m.insertAfter("{"
-                                + String.format(format, "after", instance, m.getDeclaringClass().getName(), m.getMethodInfo2(), "new Object[] {($w) $_}")
+                                + "Object[] ret = new Object[] {($w) $_};"
+                                + String.format(format, "after", instance, m.getDeclaringClass().getName(), m.getMethodInfo2(), "ret")
+                                + "$_ = ($r) ret[0];"
                                 + "}", true);
                     } catch (CannotCompileException e) {
                         LOG.log(Level.SEVERE, m.getLongName(), e);
