@@ -1,5 +1,9 @@
 package com.timepath.hooker;
 
+import javassist.CtMethod;
+import javassist.CtNewMethod;
+import javassist.bytecode.MethodInfo;
+
 import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
 import java.util.logging.Logger;
@@ -24,14 +28,23 @@ public class Test {
                 return classname.startsWith(prefix);
             }
         }, new Hook() {
+            int depth;
+
+            String pad(int size) {
+                if (size == 0) return "";
+                StringBuilder ret = new StringBuilder();
+                for (int i = 0; i < size; i++) ret.append("\t");
+                return ret.toString();
+            }
+
             @Override
             public void before(Object inst, String owner, String method, Object[] args) {
-                LOG.info("{ " + inst + " " + owner + " " + method + "\t" + Arrays.deepToString(args));
+                LOG.info(pad(depth++) + ">>> " + inst + " " + owner + " " + method + "\t" + Arrays.deepToString(args));
             }
 
             @Override
             public void after(Object inst, String owner, String method, Object[] args) {
-                LOG.info("} " + inst + " " + owner + " " + method + "\t" + Arrays.deepToString(args));
+                LOG.info(pad(--depth) + "<<< " + inst + " " + owner + " " + method + "\t" + Arrays.deepToString(args));
             }
         }, main);
     }
