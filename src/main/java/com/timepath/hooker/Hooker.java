@@ -60,14 +60,14 @@ public class Hooker {
                     e.printStackTrace();
                 }
                 // https://rawgit.com/jboss-javassist/javassist/master/tutorial/tutorial2.html#before
-                String format = "{ " + hooks + ".%s(\"" + classname + "\", (Object) %s, \"%s\", \"%s\", $args); }";
+                String format = "{ " + hooks + ".%s(\"" + classname + "\", (Object) %s, \"%s\", \"%s\", %s); }";
                 CtClass cc = pool.get(classname);
                 for (CtMethod m : cc.getDeclaredMethods()) {
                     boolean isInstance = (m.getModifiers() & AccessFlag.STATIC) == 0;
                     String instance = isInstance ? "this" : "null";
                     try {
-                        m.insertBefore(String.format(format, "before", instance, m.getDeclaringClass().getName(), m.getMethodInfo2()));
-                        m.insertAfter(String.format(format, "after", instance, m.getDeclaringClass().getName(), m.getMethodInfo2()), true);
+                        m.insertBefore(String.format(format, "before", instance, m.getDeclaringClass().getName(), m.getMethodInfo2(), "$args"));
+                        m.insertAfter(String.format(format, "after", instance, m.getDeclaringClass().getName(), m.getMethodInfo2(), "new Object[] {($w) $_}"), true);
                     } catch (CannotCompileException e) {
                         LOG.log(Level.SEVERE, m.getLongName(), e);
                         throw e;
